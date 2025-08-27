@@ -1,6 +1,6 @@
 from qfgame.screen import Screen
 from qfgame.keyboard import Keyboard
-from time import monotonic
+from time import monotonic, sleep
 
 
 class Game:
@@ -18,18 +18,15 @@ class Game:
 
     def main(self):
         with self.keyboard:
-            delay = 0
             self.screen.clear()
             while True:
                 t0 = monotonic()
                 self.screen.reset_cursor()
-                key = self.keyboard.getch(delay)
-                while key:
-                    print(f"Got: {key}")
-                    key = self.keyboard.getch(0)
                 self.screen.print()
+                while key := self.keyboard.getch():
+                    print(f"Got: {key}")
                 t1 = monotonic()
                 took = t1 - t0
                 delay = self.spf - took
-                if delay < 0:
-                    delay = 0
+                if delay > 0:
+                    sleep(delay)

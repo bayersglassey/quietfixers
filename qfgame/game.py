@@ -1,7 +1,8 @@
 from typing import NamedTuple
-from qfgame.screen import Screen
-from qfgame.keyboard import Keyboard
 from time import monotonic, sleep
+
+from .screen import Screen
+from .keyboard import Keyboard
 
 
 class Event(NamedTuple):

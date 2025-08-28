@@ -1,4 +1,5 @@
 from typing import NamedTuple
+from struct import Struct
 
 
 SHADES = ' ░▒▓█'
@@ -35,15 +36,96 @@ class Rect(NamedTuple):
     h: int
 
 
+BITMAP_HEADER_STRUCT = Struct('!LL') # w, h
+BITMAP_PIXEL_STRUCT = Struct('!BL') # colour, char
+
+
 class Bitmap:
 
-    def __init__(self, w: int, h: int, colour_code: int = BLACK, char: str = FILLED):
+    def __init__(
+            self,
+            w: int,
+            h: int,
+            colour_code: int = BLACK,
+            char: str = FILLED,
+            *,
+            colour_codes: list[int] = None,
+            chars: list[str] = None,
+            ):
         self.w = w
         self.h = h
-        self.size = w * h
-        self.colour_codes = [colour_code] * self.size
-        self.chars = [char] * self.size
+        self.size = size = w * h
+
+        if colour_codes is None:
+            colour_codes = [colour_code] * size
+        if chars is None:
+            chars = [char] * size
+        self.colour_codes = colour_codes
+        self.chars = chars
+
         self.get_index = lambda x, y: w * y + x
+
+    def pack(self) -> bytearray:
+        r"""Produces a portable binary representation of a bitmap
+
+            >>> self = Bitmap(3, 2)
+            >>> self.set_pixel(0, 0, WHITE, 'A')
+            >>> self.set_pixel(1, 0, WHITE, 'B')
+            >>> self.set_pixel(2, 1, WHITE, 'C')
+            >>> self.print()
+            +---+
+            |AB█|
+            |██C|
+            +---+
+
+            >>> packed = self.pack()
+            >>> packed[:10]
+            bytearray(b'\x00\x00\x00\x03\x00\x00\x00\x02\x0f\x00')
+            >>> Bitmap.unpack(packed).print()
+            +---+
+            |AB█|
+            |██C|
+            +---+
+
+        """
+        header_size = BITMAP_HEADER_STRUCT.size
+        pixel_size = BITMAP_PIXEL_STRUCT.size
+        buffer_size = header_size + pixel_size * self.size
+        buffer = bytearray(buffer_size)
+        BITMAP_HEADER_STRUCT.pack_into(buffer, 0, self.w, self.h)
+        for i, (colour_code, char) in enumerate(zip(self.colour_codes, self.chars)):
+            colour = get_colour(colour_code)
+            offset = header_size + pixel_size * i
+            BITMAP_PIXEL_STRUCT.pack_into(buffer, offset, colour, ord(char))
+        return buffer
+
+    @staticmethod
+    def unpack(buffer) -> 'Bitmap':
+        """Inverse of pack()"""
+        header_size = BITMAP_HEADER_STRUCT.size
+        pixel_size = BITMAP_PIXEL_STRUCT.size
+        w, h = BITMAP_HEADER_STRUCT.unpack_from(buffer, 0)
+        size = w * h
+        colour_codes = [None] * size
+        chars = [None] * size
+        for i in range(size):
+            offset = header_size + pixel_size * i
+            colour, char = BITMAP_PIXEL_STRUCT.unpack_from(buffer, offset)
+            colour_codes[i] = get_colour_code(colour)
+            chars[i] = chr(char)
+        return Bitmap(w, h, colour_codes=colour_codes, chars=chars)
+
+    def save(self, file):
+        if isinstance(file, str):
+            file = open(file, 'wb')
+        buffer = self.pack()
+        file.write(buffer)
+
+    @staticmethod
+    def load(file) -> 'Bitmap':
+        if isinstance(file, str):
+            file = open(file, 'rb')
+        return Bitmap.unpack(file.read())
 
     def contains(self, rect: Rect) -> bool:
         x, y, w, h = rect

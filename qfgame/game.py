@@ -5,10 +5,12 @@ from time import monotonic, sleep
 
 from .bitmap import Bitmap
 from .screen import Screen
-from .keyboard import Keyboard, Key
+from .keyboard import Keyboard, Key, KeyMod, parse_key
 
 
 class Event(NamedTuple):
+    # It's up to you to iterate over this, and call parse_key on its
+    # members if you want to extract key modifiers
     keys: list[str]
 
 
@@ -64,14 +66,26 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
 
     for event in game.run():
         for key in event.keys:
+            key, mod = parse_key(key)
+
+            move_amount = 1
+            if mod == KeyMod.shift:
+                move_amount = 5
+            elif mod == KeyMod.shift:
+                move_amount = 10
+
             if key == Key.up:
-                if y > 0: y -= 1
+                y -= move_amount
+                if y < 0: y = 0
             elif key == Key.down:
-                if y < screen.h - 1: y += 1
+                y += move_amount
+                if y >= screen.h: y = screen.h - 1
             elif key == Key.left:
-                if x > 0: x -= 1
+                x -= move_amount
+                if x < 0: x = 0
             elif key == Key.right:
-                if x < screen.w - 1: x += 1
+                x += move_amount
+                if x >= screen.w: x = screen.w - 1
             elif key == 'q':
                 return
             elif key == 's':

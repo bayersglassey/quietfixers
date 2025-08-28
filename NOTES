@@ -1,0 +1,45 @@
+>>> cc = list(range(30, 38)) + list(range(90, 98))
+>>> for c in cc: print(f'\033[{c}m██')
+... 
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+██
+
+
+
+https://stackoverflow.com/a/69308048
+
+    # outputs e.g. /sys/class/input/input4/capabilities/key
+    ls -d1 /sys/class/input/input*/capabilities/key | while read dev; do
+        KEY="$(cat $dev | rev | cut -d ' ' -f 1 | rev)"
+        [ $(( (0x$KEY & 0x7f07fc3ff0000) == 0x7f07fc3ff0000 )) == 1 ] && echo $dev
+    done
+
+
+
+https://unix.stackexchange.com/a/74907
+
+    ...just amazing.
+
+
+https://www.codyhiar.com/blog/linux-keylogger-how-to-read-linux-keyboard-buffer/
+
+    # outputs e.g. event4
+    grep -E  'Handlers|EV=' /proc/bus/input/devices | \
+    grep -B1 'EV=120013' | \
+    grep -Eo 'event[0-9]+'
+
+

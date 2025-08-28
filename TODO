@@ -1,0 +1,8 @@
+
+
+Just use "blessed"?.. curses based:
+https://blessed.readthedocs.io/en/latest/intro.html
+
+
+So then maybe curtsies?.. AHH SHIT, it uses blessed ;)
+https://pypi.org/project/curtsies/

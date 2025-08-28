@@ -34,6 +34,13 @@ class Screen:
         self.colour_codes = [BLACK] * self.size
         self.chars = [FILLED] * self.size
         self.get_index = lambda x, y: w * y + x
+        self.messages = []
+
+    def print(self, message: str):
+        self.messages.append(message)
+
+    def clear_messages(self):
+        self.messages.clear()
 
     def get_pixel(self, x: int, y: int) -> int:
         i = self.get_index(x, y)
@@ -79,4 +86,6 @@ class Screen:
             add_part(chars[i])
             if (i + 1) % w == 0:
                 add_part('\033[0m\r\n')
+        for message in self.messages:
+            add_part(message.replace('\n', '\r\n') + '\r\n')
         self.file.write(''.join(parts))

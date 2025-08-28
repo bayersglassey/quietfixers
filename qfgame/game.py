@@ -40,6 +40,7 @@ class Game:
                 screen.reset_cursor()
                 screen.display()
                 screen.flush()
+                screen.clear_messages()
 
                 # Delay
                 t1 = monotonic()
@@ -49,8 +50,10 @@ class Game:
                     sleep(delay)
 
 
-def test_logic(game):
-    screen = game.screen
+def drawtest():
+    """A simple "paint" program"""
+    screen = Screen(64, 32)
+    game = Game(screen=screen)
     tick = 0
     x = 0
     y = 0
@@ -68,5 +71,5 @@ def test_logic(game):
             elif key == 'q':
                 return
         screen.set_pixel(x, y, 7)
-        print(f"Tick: {tick!r}")
+        screen.print(f"Tick: {tick!r}")
         tick += 1

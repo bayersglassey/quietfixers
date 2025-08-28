@@ -1,9 +1,28 @@
+import re
 import sys
 
+from enum import StrEnum
 from os import get_blocking, set_blocking
 from termios import tcsetattr, TCSAFLUSH
 from tty import setraw, setcbreak
 from contextlib import contextmanager
+
+
+class Key(StrEnum):
+    up = 'up'
+    down = 'down'
+    left = 'left'
+    right = 'right'
+
+
+# Detects e.g. arrow keys
+KEY_REGEX = re.compile(r'\x1b\[.|.')
+KEY_MAP = {
+    '\x1b[A': Key.up,
+    '\x1b[B': Key.down,
+    '\x1b[D': Key.left,
+    '\x1b[C': Key.right,
+}
 
 
 class Keyboard:
@@ -20,6 +39,12 @@ class Keyboard:
         while c := self.file.read(1):
             s += c
         return s
+
+    def get_keys(self) -> list[str]:
+        keys = []
+        for key in KEY_REGEX.findall(self.gets()):
+            keys.append(KEY_MAP.get(key, key))
+        return keys
 
     @contextmanager
     def raw(self):

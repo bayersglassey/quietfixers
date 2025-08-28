@@ -197,7 +197,7 @@ class Bitmap:
             lines.append('+' + '-' * self.w + '+')
         print('\n'.join(lines))
 
-    def blit(self, other: 'Bitmap', dst_x: int, dst_y: int, src: Rect = None):
+    def blit(self, other: 'Bitmap', dst_x: int = 0, dst_y: int = 0, src: Rect = None):
         """
 
             Bitmap to be blitted onto another:

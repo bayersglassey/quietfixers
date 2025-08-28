@@ -1,12 +1,15 @@
+import os
+
 from typing import NamedTuple
 from time import monotonic, sleep
 
+from .bitmap import Bitmap
 from .screen import Screen
-from .keyboard import Keyboard
+from .keyboard import Keyboard, Key
 
 
 class Event(NamedTuple):
-    keys: str
+    keys: list[str]
 
 
 class Game:
@@ -34,7 +37,7 @@ class Game:
 
                 # Handle I/O
                 with keyboard.no_block():
-                    keys = keyboard.gets()
+                    keys = keyboard.get_keys()
                 yield Event(keys=keys)
 
                 # Render
@@ -51,7 +54,7 @@ class Game:
                     sleep(delay)
 
 
-def drawtest():
+def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
     """A simple "paint" program"""
     screen = Screen(64, 32)
     game = Game(screen=screen)
@@ -61,16 +64,20 @@ def drawtest():
 
     for event in game.run():
         for key in event.keys:
-            if key == 'w':
+            if key == Key.up:
                 if y > 0: y -= 1
-            elif key == 's':
+            elif key == Key.down:
                 if y < screen.h - 1: y += 1
-            elif key == 'a':
+            elif key == Key.left:
                 if x > 0: x -= 1
-            elif key == 'd':
+            elif key == Key.right:
                 if x < screen.w - 1: x += 1
             elif key == 'q':
                 return
+            elif key == 's':
+                screen.save(filename)
+            elif key == 'l':
+                Bitmap.load(filename).blit(screen)
         screen.set_pixel(x, y, 7)
         screen.print(f"Tick: {tick!r}")
         tick += 1

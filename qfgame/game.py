@@ -28,12 +28,23 @@ class Game:
         self.fps = fps
         self.spf = 1 / fps
 
+    def get_text_input(self, prompt: str) -> str:
+        with self.keyboard.cooked():
+            text = input(prompt)
+        # WARNING: "clearing" the screen ends up meaning Gnome Terminal
+        # scrolls down past everything which had been drawn on it, which
+        # I think maybe we want to avoid... otherwise, after quitting the
+        # game, if you scroll up, you see every frame it ever rendered
+        # before terminal was cleared, if that makes sense.
+        #self.screen.clear()
+        return text
+
     def run(self):
         screen = self.screen
         keyboard = self.keyboard
 
-        screen.clear()
         with screen.hide_cursor(), keyboard.raw():
+            screen.clear()
             while True:
                 t0 = monotonic()
 
@@ -59,7 +70,8 @@ class Game:
 def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
     """A simple "paint" program"""
     screen = Screen(64, 32)
-    game = Game(screen=screen)
+    keyboard = Keyboard()
+    game = Game(screen=screen, keyboard=keyboard)
     tick = 0
     x = 0
     y = 0
@@ -92,6 +104,8 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
                 screen.save(filename)
             elif key == 'l':
                 Bitmap.load(filename).blit(screen)
+            elif key == 'f':
+                filename = game.get_text_input(f"Change filename (was {filename}): ")
         screen.set_pixel(x, y, 7)
         screen.print(f"Tick: {tick!r}")
         tick += 1

@@ -3,7 +3,7 @@ import sys
 
 from enum import StrEnum
 from os import get_blocking, set_blocking
-from termios import tcsetattr, TCSAFLUSH
+from termios import tcgetattr, tcsetattr, TCSAFLUSH
 from tty import setraw, setcbreak
 from contextlib import contextmanager
 
@@ -81,6 +81,7 @@ class Keyboard:
     def __init__(self, file=None):
         self.file = sys.stdin if file is None else file
         self.fileno = self.file.fileno()
+        self.original_tcattrs = None
 
     def getch(self) -> str:
         return self.file.read(1)
@@ -99,19 +100,37 @@ class Keyboard:
 
     @contextmanager
     def raw(self):
-        tcattrs = setraw(self.file)
+        if self.original_tcattrs is not None:
+            raise Exception("Can't nest cbreak, raw, etc")
+        self.original_tcattrs = setraw(self.file)
         try:
             yield
         finally:
-            tcsetattr(self.file, TCSAFLUSH, tcattrs)
+            tcsetattr(self.file, TCSAFLUSH, self.original_tcattrs)
+            self.original_tcattrs = None
 
     @contextmanager
     def cbreak(self):
-        tcattrs = setcbreak(self.file)
+        if self.original_tcattrs is not None:
+            raise Exception("Can't nest cbreak, raw, etc")
+        self.original_tcattrs = setcbreak(self.file)
         try:
             yield
         finally:
-            tcsetattr(self.file, TCSAFLUSH, tcattrs)
+            tcsetattr(self.file, TCSAFLUSH, self.original_tcattrs)
+            self.original_tcattrs = None
+
+    @contextmanager
+    def cooked(self):
+        """Temporarily breaks out of raw or cbreak"""
+        if self.original_tcattrs is None:
+            return
+        noncooked_tcattrs = tcgetattr(self.file)
+        tcsetattr(self.file, TCSAFLUSH, self.original_tcattrs)
+        try:
+            yield
+        finally:
+            tcsetattr(self.file, TCSAFLUSH, noncooked_tcattrs)
 
     @contextmanager
     def no_block(self):

@@ -142,3 +142,11 @@ class Keyboard:
             yield
         finally:
             set_blocking(self.fileno, True)
+
+
+def getkey() -> str:
+    """For testing purposes, seeing what a given keypress returns, etc"""
+    k = Keyboard()
+    with k.cbreak(), k.no_block():
+        while not (keys := k.get_keys()): pass
+        return keys

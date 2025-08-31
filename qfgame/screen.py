@@ -12,6 +12,11 @@ class Screen(Bitmap):
         self.file = sys.stdout if file is None else file
         self.flush = self.file.flush
         self.messages = []
+        self.highlights = ()
+
+    def set_highlight(self, *highlights):
+        # Each highlight should be a pair (x, y)
+        self.highlights = highlights
 
     def print(self, message: str):
         self.messages.append(message)
@@ -39,9 +44,15 @@ class Screen(Bitmap):
         chars = self.chars
         parts = []
         add_part = parts.append
+        highlights = {self.get_index(x, y) for x, y in self.highlights}
         for i in range(self.size):
             add_part('\033[')
+            in_highlights = i in highlights
+            if in_highlights:
+                add_part('7;')
             add_part(str(colour_codes[i]))
+            if in_highlights:
+                add_part(';0')
             add_part('m')
             add_part(chars[i])
             if (i + 1) % w == 0:

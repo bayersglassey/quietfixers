@@ -3,7 +3,7 @@ import os
 from typing import NamedTuple
 from time import monotonic, sleep
 
-from .bitmap import Bitmap
+from .bitmap import Bitmap, get_colour_code
 from .screen import Screen
 from .keyboard import Keyboard, Key, KeyMod, parse_key
 
@@ -21,7 +21,7 @@ class Game:
             *,
             screen: Screen = None,
             keyboard: Keyboard = None,
-            fps: float = 30,
+            fps: float = 15,
             ):
         self.screen = screen or Screen(64, 32)
         self.keyboard = keyboard or Keyboard()
@@ -67,6 +67,19 @@ class Game:
                     sleep(delay)
 
 
+KEYS_TO_COLOURS = {
+    **{str(i): i for i in range(8)},
+    ')': 8 + 0,
+    '!': 8 + 1,
+    '@': 8 + 2,
+    '#': 8 + 3,
+    '$': 8 + 4,
+    '%': 8 + 5,
+    '^': 8 + 6,
+    '&': 8 + 7,
+}
+
+
 def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
     """A simple "paint" program"""
     screen = Screen(64, 32)
@@ -75,6 +88,8 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
     tick = 0
     x = 0
     y = 0
+    colour = 7
+    autodraw = False
 
     for event in game.run():
         for key in event.keys:
@@ -105,7 +120,22 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
             elif key == 'l':
                 Bitmap.load(filename).blit(screen)
             elif key == 'f':
+                screen.flood_fill(x, y, colour)
+            elif key == 'F':
                 filename = game.get_text_input(f"Change filename (was {filename}): ")
-        screen.set_pixel(x, y, 7)
+            elif key in KEYS_TO_COLOURS:
+                colour = KEYS_TO_COLOURS[key]
+            elif key == ' ':
+                screen.set_pixel(x, y, colour)
+            elif key == 'P':
+                autodraw = not autodraw
+        if autodraw:
+            screen.set_pixel(x, y, colour)
+        screen.set_highlight((x, y))
         screen.print(f"Tick: {tick!r}")
+        def to_ansi(c: int) -> str:
+            return f'\033[{get_colour_code(c)}m█\033[0m'
+        screen.print(f"Selected colour: \033[{get_colour_code(colour)}m{colour:2}\033[0m")
+        screen.print(''.join(to_ansi(c) for c in range(8)))
+        screen.print(''.join(to_ansi(c + 8) for c in range(8)))
         tick += 1

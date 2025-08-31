@@ -1,5 +1,6 @@
 from typing import NamedTuple
 from struct import Struct
+from collections import deque
 
 
 SHADES = ' ░▒▓█'
@@ -7,12 +8,15 @@ UNFILLED = SHADES[0]
 FILLED = SHADES[-1]
 
 
+HEXDIGITS = '0123456789ABCDEF'
+
+
 def get_colour(colour_code: int) -> int:
     # inverse of get_colour_code
     if colour_code < 30:
         # already a colour
         return colour_code
-    return colour_code - 30 if colour_code < 90 else colour_code - 90
+    return colour_code - 30 if colour_code < 90 else colour_code - 90 + 8
 
 
 def get_colour_code(colour: int) -> int:
@@ -21,7 +25,7 @@ def get_colour_code(colour: int) -> int:
     if colour >= 30:
         # already a colour code
         return colour
-    return colour + 30 if colour < 8 else colour + 90
+    return colour + 30 if colour < 8 else colour - 8 + 90
 
 
 BLACK = get_colour_code(0)
@@ -127,7 +131,15 @@ class Bitmap:
             file = open(file, 'rb')
         return Bitmap.unpack(file.read())
 
-    def contains(self, rect: Rect) -> bool:
+    def contains_point(self, x: int, y: int) -> bool:
+        return (
+            x >= 0 and
+            x < self.w and
+            y >= 0 and
+            y < self.h
+        )
+
+    def contains_rect(self, rect: Rect) -> bool:
         x, y, w, h = rect
         return (
             x >= 0 and
@@ -177,19 +189,120 @@ class Bitmap:
         self.colour_codes[i] = colour_code
         self.chars[i] = char
 
+    def flood_fill(self, x: int, y: int, colour: int, char: str = FILLED):
+        """Flood fill algorithm.
+        Only looks at pixel colour when determining whether to "spread".
+
+            >>> self = Bitmap(3, 3)
+            >>> self.print(use_colours=True)
+            +---+
+            |000|
+            |000|
+            |000|
+            +---+
+            >>> self.flood_fill(1, 1, 1)
+            >>> self.print(use_colours=True)
+            +---+
+            |111|
+            |111|
+            |111|
+            +---+
+
+            >>> self = Bitmap(3, 3)
+            >>> self.set_pixel(1, 0, 1)
+            >>> self.set_pixel(0, 1, 1)
+            >>> self.set_pixel(2, 1, 1)
+            >>> self.set_pixel(1, 2, 1)
+            >>> self.print(use_colours=True)
+            +---+
+            |010|
+            |101|
+            |010|
+            +---+
+            >>> self.flood_fill(1, 1, 1)
+            >>> self.print(use_colours=True)
+            +---+
+            |010|
+            |111|
+            |010|
+            +---+
+
+            >>> self = Bitmap(6, 3)
+            >>> self.set_pixel(1, 0, 9)
+            >>> self.set_pixel(2, 1, 9)
+            >>> self.set_pixel(3, 2, 9)
+            >>> self.print(use_colours=True)
+            +------+
+            |090000|
+            |009000|
+            |000900|
+            +------+
+            >>> self.flood_fill(2, 1, 8)
+            >>> self.print(use_colours=True)
+            +------+
+            |090000|
+            |008000|
+            |000900|
+            +------+
+            >>> self.flood_fill(1, 1, 1)
+            >>> self.print(use_colours=True)
+            +------+
+            |190000|
+            |118000|
+            |111900|
+            +------+
+            >>> self.flood_fill(3, 1, 2)
+            >>> self.print(use_colours=True)
+            +------+
+            |192222|
+            |118222|
+            |111922|
+            +------+
+
+        """
+        colour_code = get_colour_code(colour)
+        i = self.get_index(x, y)
+        replace_colour_code = self.colour_codes[i]
+        if replace_colour_code == colour_code:
+            return
+        points = deque([(x, y)])
+        while points:
+            x, y = points.popleft()
+            self.set_pixel(x, y, colour_code, char)
+            for p1 in (
+                (x - 1, y),
+                (x + 1, y),
+                (x, y - 1),
+                (x, y + 1),
+            ):
+                x1, y1 = p1
+                if not self.contains_point(x1, y1):
+                    continue
+                i1 = self.get_index(x1, y1)
+                if self.colour_codes[i1] != replace_colour_code:
+                    continue
+                if p1 in points:
+                    continue
+                points.append(p1)
+
     def fill(self, colour: int, char: str = FILLED):
         colour_code = get_colour_code(colour)
         self.colour_codes = [colour_code] * self.size
         self.chars = [char] * self.size
 
-    def print(self, *, border=True):
+    def print(self, *, border=True, use_colours=False):
         """For debugging purposes, e.g. doctest"""
         lines = []
         if border:
             lines.append('+' + '-' * self.w + '+')
         for y in range(self.h):
             i = y * self.w
-            line = ''.join(self.chars[i: i + self.w])
+            if use_colours:
+                colour_codes = self.colour_codes[i: i + self.w]
+                _colours = [get_colour(c) for c in colour_codes]
+                line = ''.join(HEXDIGITS[c] for c in _colours)
+            else:
+                line = ''.join(self.chars[i: i + self.w])
             if border:
                 line = f'|{line}|'
             lines.append(line)
@@ -296,7 +409,7 @@ class Bitmap:
             src_y = 0
             w = self_w
             h = self_h
-        elif not self.contains(src):
+        elif not self.contains_rect(src):
             raise ValueError(f"{src} not contained in bitmap with dims {(self_w, self_h)}")
         else:
             src_x, src_y, w, h = src

@@ -102,17 +102,33 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
                 move_amount = 10
 
             if key == Key.up:
-                y -= move_amount
-                if y < 0: y = 0
+                y1 = y - move_amount
+                if y1 < 0: y1 = 0
+                if autodraw:
+                    for _y in range(y1, y + 1):
+                        screen.set_pixel(x, _y, colour)
+                y = y1
             elif key == Key.down:
-                y += move_amount
-                if y >= screen.h: y = screen.h - 1
+                y1 = y + move_amount
+                if y1 >= screen.h: y1 = screen.h - 1
+                if autodraw:
+                    for _y in range(y, y1 + 1):
+                        screen.set_pixel(x, _y, colour)
+                y = y1
             elif key == Key.left:
-                x -= move_amount
-                if x < 0: x = 0
+                x1 = x - move_amount
+                if x1 < 0: x1 = 0
+                if autodraw:
+                    for _x in range(x1, x + 1):
+                        screen.set_pixel(_x, y, colour)
+                x = x1
             elif key == Key.right:
-                x += move_amount
-                if x >= screen.w: x = screen.w - 1
+                x1 = x + move_amount
+                if x1 >= screen.w: x1 = screen.w - 1
+                if autodraw:
+                    for _x in range(x, x1 + 1):
+                        screen.set_pixel(_x, y, colour)
+                x = x1
             elif key == 'q':
                 return
             elif key == 's':
@@ -127,15 +143,15 @@ def drawtest(filename=os.path.join('scratch', 'drawtest.dat')):
                 colour = KEYS_TO_COLOURS[key]
             elif key == ' ':
                 screen.set_pixel(x, y, colour)
-            elif key == 'P':
+            elif key == 'a':
                 autodraw = not autodraw
-        if autodraw:
-            screen.set_pixel(x, y, colour)
         screen.set_highlight((x, y))
         screen.print(f"Tick: {tick!r}")
         def to_ansi(c: int) -> str:
             return f'\033[{get_colour_code(c)}m█\033[0m'
-        screen.print(f"Selected colour: \033[{get_colour_code(colour)}m{colour:2}\033[0m")
+        screen.print(
+            ('[AUTO] ' if autodraw else '') +
+            f"Selected colour: \033[{get_colour_code(colour)}m{colour:2}\033[0m")
         screen.print(''.join(to_ansi(c) for c in range(8)))
         screen.print(''.join(to_ansi(c + 8) for c in range(8)))
         tick += 1

@@ -310,7 +310,15 @@ class Bitmap:
             lines.append('+' + '-' * self.w + '+')
         print('\n'.join(lines))
 
-    def blit(self, other: 'Bitmap', dst_x: int = 0, dst_y: int = 0, src: Rect = None):
+    def blit(
+            self,
+            other: 'Bitmap',
+            dst_x: int = 0,
+            dst_y: int = 0,
+            src: Rect = None,
+            *,
+            transparent_char: str = None,
+            ):
         """
 
             Bitmap to be blitted onto another:
@@ -397,6 +405,16 @@ class Bitmap:
             |   |
             +---+
 
+            You can optionally supply a transparent char:
+            >>> other = Bitmap(3, 3, char='.')
+            >>> self.blit(other, transparent_char='C')
+            >>> other.print()
+            +---+
+            |AB.|
+            |.D.|
+            |...|
+            +---+
+
         """
         self_w = self.w
         self_h = self.h
@@ -437,9 +455,18 @@ class Bitmap:
         src_i = src_y * self_w + src_x
         dst_i = dst_y * other_w + dst_x
         for y in range(h):
-            src_i2 = src_i + w
-            dst_i2 = dst_i + w
-            other.colour_codes[dst_i: dst_i2] = self.colour_codes[src_i: src_i2]
-            other.chars[dst_i: dst_i2] = self.chars[src_i: src_i2]
+            if transparent_char:
+                for i in range(w):
+                    src_j = src_i + i
+                    dst_j = dst_i + i
+                    char = self.chars[src_j]
+                    if char != transparent_char:
+                        other.colour_codes[dst_j] = self.colour_codes[src_j]
+                        other.chars[dst_j] = char
+            else:
+                src_i2 = src_i + w
+                dst_i2 = dst_i + w
+                other.colour_codes[dst_i: dst_i2] = self.colour_codes[src_i: src_i2]
+                other.chars[dst_i: dst_i2] = self.chars[src_i: src_i2]
             src_i += self_w
             dst_i += other_w

@@ -18,7 +18,7 @@ class Game:
             *,
             screen: Screen = None,
             keyboard: Keyboard = None,
-            fps: float = 15,
+            fps: float = 30,
             ):
         self.screen = screen or Screen(64, 32)
         self.keyboard = keyboard or Keyboard()

@@ -1,4 +1,6 @@
 import os
+import cProfile
+from argparse import ArgumentParser
 
 from .bitmap import Bitmap, get_colour_code
 from .screen import Screen
@@ -19,8 +21,9 @@ KEYS_TO_COLOURS = {
 }
 
 
-def main(filename=os.path.join('scratch', 'drawtest.dat')):
+def main(args):
     """A simple "paint" program"""
+    filename = args.filename
     screen = Screen(64, 32)
     keyboard = Keyboard()
     game = Game(screen=screen, keyboard=keyboard)
@@ -37,7 +40,7 @@ def main(filename=os.path.join('scratch', 'drawtest.dat')):
             move_amount = 1
             if mod == KeyMod.shift:
                 move_amount = 5
-            elif mod == KeyMod.shift:
+            elif mod == KeyMod.ctrl:
                 move_amount = 10
 
             if key == Key.up:
@@ -96,5 +99,18 @@ def main(filename=os.path.join('scratch', 'drawtest.dat')):
         tick += 1
 
 
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('-f', '--filename',
+        default=os.path.join('scratch', 'drawtest.dat'),
+        help="Filename for saving & loading")
+    parser.add_argument('-P', '--profile', default=False, action='store_true')
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    if args.profile:
+        cProfile.run('main(args)')
+    else:
+        main()

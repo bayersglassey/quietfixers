@@ -39,24 +39,26 @@ class Screen(Bitmap):
             self.file.write('\033[?25h')
 
     def display(self):
+        # NOTE: make sure to use '\r\n', because we assume we're in a
+        # Keyboard.raw() block!
         w = self.w
         colour_codes = self.colour_codes
         chars = self.chars
-        parts = []
-        add_part = parts.append
         highlights = {self.get_index(x, y) for x, y in self.highlights}
+        parts = []
         for i in range(self.size):
-            add_part('\033[')
+            part = '\033['
             in_highlights = i in highlights
             if in_highlights:
-                add_part('7;')
-            add_part(str(colour_codes[i]))
+                part += '7;'
+            part += str(colour_codes[i])
             if in_highlights:
-                add_part(';0')
-            add_part('m')
-            add_part(chars[i])
+                part += ';0'
+            part += 'm'
+            part += chars[i] * 2
             if (i + 1) % w == 0:
-                add_part('\033[0m\r\n')
+                part += '\033[0m\r\n'
+            parts.append(part)
         for message in self.messages:
-            add_part(message.replace('\n', '\r\n') + '\r\n')
+            parts.append(message.replace('\n', '\r\n') + '\r\n')
         self.file.write(''.join(parts))

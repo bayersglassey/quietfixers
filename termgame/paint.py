@@ -24,12 +24,16 @@ KEYS_TO_COLOURS = {
 def main(args):
     """A simple "paint" program"""
     filename = args.filename
-    screen = Screen(64, 32)
+    w = args.width
+    screen = Screen(w, w)
     keyboard = Keyboard()
     game = Game(screen=screen, keyboard=keyboard)
+    bitmap = Bitmap(w, w)
     tick = 0
     x = 0
     y = 0
+    rot = 0
+    target_rot = 0
     colour = 7
     autodraw = False
 
@@ -48,54 +52,84 @@ def main(args):
                 if y1 < 0: y1 = 0
                 if autodraw:
                     for _y in range(y1, y + 1):
-                        screen.set_pixel(x, _y, colour)
+                        bitmap.set_pixel(x, _y, colour)
                 y = y1
             elif key == Key.down:
                 y1 = y + move_amount
-                if y1 >= screen.h: y1 = screen.h - 1
+                if y1 >= bitmap.h: y1 = bitmap.h - 1
                 if autodraw:
                     for _y in range(y, y1 + 1):
-                        screen.set_pixel(x, _y, colour)
+                        bitmap.set_pixel(x, _y, colour)
                 y = y1
             elif key == Key.left:
                 x1 = x - move_amount
                 if x1 < 0: x1 = 0
                 if autodraw:
                     for _x in range(x1, x + 1):
-                        screen.set_pixel(_x, y, colour)
+                        bitmap.set_pixel(_x, y, colour)
                 x = x1
             elif key == Key.right:
                 x1 = x + move_amount
-                if x1 >= screen.w: x1 = screen.w - 1
+                if x1 >= bitmap.w: x1 = bitmap.w - 1
                 if autodraw:
                     for _x in range(x, x1 + 1):
-                        screen.set_pixel(_x, y, colour)
+                        bitmap.set_pixel(_x, y, colour)
                 x = x1
             elif key == 'q':
                 return
             elif key == 's':
-                screen.save(filename)
+                bitmap.save(filename)
             elif key == 'l':
-                Bitmap.load(filename).blit(screen)
+                new_bitmap = Bitmap.load(filename)
+                if new_bitmap.w != w or new_bitmap.h != w:
+                    game.get_text_input(
+                        f"Can't load bitmap of dims {(new_bitmap.w, new_bitmap.h)}, need {(w, w)}. Press a key: ")
+                else:
+                    bitmap = new_bitmap
             elif key == 'f':
-                screen.flood_fill(x, y, colour)
+                bitmap.flood_fill(x, y, colour)
             elif key == 'F':
                 filename = game.get_text_input(f"Change filename (was {filename}): ")
             elif key in KEYS_TO_COLOURS:
                 colour = KEYS_TO_COLOURS[key]
             elif key == ' ':
-                screen.set_pixel(x, y, colour)
+                bitmap.set_pixel(x, y, colour)
             elif key == 'a':
                 autodraw = not autodraw
+            elif key == '[':
+                target_rot -= 5
+            elif key == '{':
+                target_rot -= w - 1 # 90 degrees
+            elif key == ']':
+                target_rot += 5
+            elif key == '}':
+                target_rot += w - 1 # 90 degrees
+            elif key == '`':
+                # Reset all transformations
+                rot = target_rot = 0
+
+        if rot < target_rot:
+            rot += 1
+        elif rot > target_rot:
+            rot -= 1
+
+        bitmap_copy = bitmap.copy()
+        bitmap_copy.rotate(rot)
+        bitmap_copy.blit(screen)
+
         screen.set_highlight((x, y))
+
         screen.print(f"Tick: {tick!r}")
-        def to_ansi(c: int) -> str:
-            return f'\033[{get_colour_code(c)}m█\033[0m'
+
         screen.print(
             ('[AUTO] ' if autodraw else '') +
             f"Selected colour: \033[{get_colour_code(colour)}m{colour:2}\033[0m")
+
+        def to_ansi(c: int) -> str:
+            return f'\033[{get_colour_code(c)}m█\033[0m'
         screen.print(''.join(to_ansi(c) for c in range(8)))
         screen.print(''.join(to_ansi(c + 8) for c in range(8)))
+
         tick += 1
 
 
@@ -104,6 +138,7 @@ def parse_args():
     parser.add_argument('-f', '--filename',
         default=os.path.join('scratch', 'drawtest.dat'),
         help="Filename for saving & loading")
+    parser.add_argument('-w', '--width', type=int, default=32)
     parser.add_argument('-P', '--profile', default=False, action='store_true')
     return parser.parse_args()
 
@@ -113,4 +148,4 @@ if __name__ == '__main__':
     if args.profile:
         cProfile.run('main(args)')
     else:
-        main()
+        main(args)

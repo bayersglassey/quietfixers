@@ -1,8 +1,9 @@
 
 
-Just use "blessed"?.. curses based:
-https://blessed.readthedocs.io/en/latest/intro.html
+I want to be able to edit while walking around.
 
 
-So then maybe curtsies?.. AHH SHIT, it uses blessed ;)
-https://pypi.org/project/curtsies/
+I also want an easy way to store & edit lots of bitmaps, like there should
+be a menu to scroll through the ones in a directory, etc.
+
+

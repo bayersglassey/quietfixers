@@ -2,10 +2,12 @@ import os
 import cProfile
 from argparse import ArgumentParser
 
-from .bitmap import Bitmap, get_colour_code
-from .screen import Screen
-from .keyboard import Keyboard, Key, KeyMod, parse_key
-from .game import Game
+from termgame.bitmap import Bitmap, get_colour_code
+from termgame.screen import Screen
+from termgame.keyboard import Keyboard, Key, KeyMod, parse_key
+from termgame.game import Game
+
+from .transitions import slow_rotate
 
 
 KEYS_TO_COLOURS = {
@@ -114,7 +116,7 @@ def main(args):
             rot -= 1
 
         bitmap_copy = bitmap.copy()
-        bitmap_copy.rotate(rot)
+        slow_rotate(bitmap_copy, rot)
         bitmap_copy.blit(screen)
 
         screen.set_highlight((x, y))

@@ -1,5 +1,7 @@
 from functools import cache
 
+from termgame.bitmap import Bitmap
+
 
 class SquareRotation:
     """Class which memoizes calculations converting between (x, y) coordinate
@@ -219,3 +221,15 @@ class SquareRotation:
 @cache
 def get_square_rotation(w: int) -> SquareRotation:
     return SquareRotation(w)
+
+
+def slow_rotate(bitmap: Bitmap, rot: int):
+    if bitmap.w != bitmap.h:
+        raise Exception(f"Can't rotate bitmap unless w == h. Have: {(bitmap.w, bitmap.h)}")
+    if not rot:
+        return
+    rotation_table = get_square_rotation(bitmap.w)
+    rotated_indexes = rotation_table.get_slow_rotated_indexes(rot)
+    bitmap.colour_codes = list(map(bitmap.colour_codes.__getitem__,
+        rotated_indexes))
+    bitmap.chars = list(map(bitmap.chars.__getitem__, rotated_indexes))

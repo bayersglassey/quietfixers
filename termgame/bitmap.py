@@ -2,8 +2,6 @@ from typing import NamedTuple
 from struct import Struct
 from collections import deque
 
-from termgame.transformations import get_square_rotation
-
 
 SHADES = ' ░▒▓█'
 UNFILLED = SHADES[0]
@@ -301,17 +299,6 @@ class Bitmap:
         colour_code = get_colour_code(colour)
         self.colour_codes = [colour_code] * self.size
         self.chars = [char] * self.size
-
-    def rotate(self, rot: int):
-        if self.w != self.h:
-            raise Exception(f"Can't rotate bitmap unless w == h. Have: {(self.w, self.h)}")
-        if not rot:
-            return
-        rotation_table = get_square_rotation(self.w)
-        rotated_indexes = rotation_table.get_slow_rotated_indexes(rot)
-        self.colour_codes = list(map(self.colour_codes.__getitem__,
-            rotated_indexes))
-        self.chars = list(map(self.chars.__getitem__, rotated_indexes))
 
     def print(self, *, border=True, use_colours=False, doubled=False):
         """For debugging purposes, e.g. doctest"""

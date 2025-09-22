@@ -482,3 +482,7 @@ class Bitmap:
                 other.chars[dst_i: dst_i2] = self.chars[src_i: src_i2]
             src_i += self_w
             dst_i += other_w
+
+    def apply_index_mapping(self, indexes: list[int]):
+        self.colour_codes = list(map(self.colour_codes.__getitem__, indexes))
+        self.chars = list(map(self.chars.__getitem__, indexes))

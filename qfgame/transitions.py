@@ -3,23 +3,23 @@ from functools import cache
 from termgame.bitmap import Bitmap
 
 
-class SquareRotation:
+class SquareTransitionTable:
     """Class which memoizes calculations converting between (x, y) coordinate
     space and uhhhh let's call them "polar Chebyshev" coordinates?.. anyway,
-    it lets us do rotation of concentric squares of pixels ("rings") within a
-    bitmap.
+    it lets us do stuff like rotation of concentric squares of pixels ("rings")
+    within a bitmap.
 
         >>> from termgame.bitmap import Bitmap
 
         >>> w = 6
-        >>> rot = SquareRotation(w)
+        >>> table = SquareTransitionTable(w)
 
-        >>> rot.ring_lens
+        >>> table.ring_lens
         [4, 12, 20]
 
         Here are the "ring indexes" for each pixel of a bitmap:
         >>> bmp = Bitmap(w, w)
-        >>> for i, (ring_i, offset, ring_len) in enumerate(rot.indexes_to_ring_coords):
+        >>> for i, (ring_i, offset, ring_len) in enumerate(table.indexes_to_ring_coords):
         ...     bmp.chars[i] = str(ring_i)
         >>> bmp.print()
         +------+
@@ -34,7 +34,7 @@ class SquareRotation:
         Here is an illustration of the "ring pixel offsets", i.e. the index of
         each pixel within a ring, counting clockwise from the top-left corner:
         >>> bmp = Bitmap(w, w)
-        >>> for i, (ring_i, offset, ring_len) in enumerate(rot.indexes_to_ring_coords):
+        >>> for i, (ring_i, offset, ring_len) in enumerate(table.indexes_to_ring_coords):
         ...     if ring_i % 2 == 0:
         ...         bmp.chars[i] = str(offset % 10)
         ...     else:
@@ -57,7 +57,7 @@ class SquareRotation:
         ...         if (i + 1) % w == 0:
         ...             print()
 
-        >>> print_indexes(rot.hard_rotated_indexes[0])
+        >>> print_indexes(table.hard_rotated_indexes[0])
           0  1  2  3  4  5
           6  7  8  9 10 11
          12 13 14 15 16 17
@@ -65,7 +65,7 @@ class SquareRotation:
          24 25 26 27 28 29
          30 31 32 33 34 35
 
-        >>> print_indexes(rot.hard_rotated_indexes[1])
+        >>> print_indexes(table.hard_rotated_indexes[1])
          30 24 18 12  6  0
          31 25 19 13  7  1
          32 26 20 14  8  2
@@ -73,7 +73,7 @@ class SquareRotation:
          34 28 22 16 10  4
          35 29 23 17 11  5
 
-        >>> print_indexes(rot.get_slow_rotated_indexes(1))
+        >>> print_indexes(table.get_slow_rotated_indexes(1))
           6  0  1  2  3  4
          12 13  7  8  9  5
          18 19 20 14 10 11
@@ -81,7 +81,7 @@ class SquareRotation:
          30 26 27 28 22 23
          31 32 33 34 35 29
 
-        >>> print_indexes(rot.get_slow_rotated_indexes(4))
+        >>> print_indexes(table.get_slow_rotated_indexes(4))
          24 18 12  6  0  1
          30 25 19 13  7  2
          31 26 20 14  8  3
@@ -89,10 +89,10 @@ class SquareRotation:
          33 28 22 16 10  5
          34 35 29 23 17 11
 
-        >>> rot.get_slow_rotated_indexes(5) == rot.hard_rotated_indexes[1]
+        >>> table.get_slow_rotated_indexes(5) == table.hard_rotated_indexes[1]
         True
 
-        >>> print_indexes(rot.get_slow_rotated_indexes(6))
+        >>> print_indexes(table.get_slow_rotated_indexes(6))
          31 30 24 18 12  6
          32 26 25 19 13  0
          33 27 21 20  7  1
@@ -100,10 +100,10 @@ class SquareRotation:
          35 22 16 10  9  3
          29 23 17 11  5  4
 
-        >>> rot.get_slow_rotated_indexes(-5) == rot.hard_rotated_indexes[-1]
+        >>> table.get_slow_rotated_indexes(-5) == table.hard_rotated_indexes[-1]
         True
 
-        >>> print_indexes(rot.get_slow_rotated_indexes(-6))
+        >>> print_indexes(table.get_slow_rotated_indexes(-6))
          11 17 23 29 35 34
           5 16 22 28 27 33
           4 10 21 20 26 32
@@ -125,7 +125,7 @@ class SquareRotation:
             for ring_i in range(self.n_rings)]
 
         self.hard_rotated_indexes = [
-            self._get_hard_rotated_indexes(rot)
+            self.get_hard_rotated_indexes(rot)
             for rot in range(4)]
 
         # Maps bitmap pixel indexes to tuples (ring_i, offset, ring_len),
@@ -179,7 +179,7 @@ class SquareRotation:
                 for coords, index in self.ring_coords_to_indexes.items()}
             for indexes in self.hard_rotated_indexes]
 
-    def _get_hard_rotated_indexes(self, rot: int) -> list[int]:
+    def get_hard_rotated_indexes(self, rot: int) -> list[int]:
         # Hard rotation: by 90 degrees at a time (clockwise)
         rot = rot % 4
         if not rot:
@@ -219,8 +219,17 @@ class SquareRotation:
 
 
 @cache
-def get_square_rotation(w: int) -> SquareRotation:
-    return SquareRotation(w)
+def get_square_transition_table(w: int) -> SquareTransitionTable:
+    return SquareTransitionTable(w)
+
+
+def hard_rotate(bitmap: Bitmap, rot: int):
+    if bitmap.w != bitmap.h:
+        raise Exception(f"Can't rotate bitmap unless w == h. Have: {(bitmap.w, bitmap.h)}")
+    if not rot:
+        return
+    table = SquareTransitionTable(bitmap.w)
+    bitmap.apply_index_mapping(table.get_hard_rotated_indexes(rot))
 
 
 def slow_rotate(bitmap: Bitmap, rot: int):
@@ -228,8 +237,5 @@ def slow_rotate(bitmap: Bitmap, rot: int):
         raise Exception(f"Can't rotate bitmap unless w == h. Have: {(bitmap.w, bitmap.h)}")
     if not rot:
         return
-    rotation_table = get_square_rotation(bitmap.w)
-    rotated_indexes = rotation_table.get_slow_rotated_indexes(rot)
-    bitmap.colour_codes = list(map(bitmap.colour_codes.__getitem__,
-        rotated_indexes))
-    bitmap.chars = list(map(bitmap.chars.__getitem__, rotated_indexes))
+    table = SquareTransitionTable(bitmap.w)
+    bitmap.apply_index_mapping(table.get_slow_rotated_indexes(rot))

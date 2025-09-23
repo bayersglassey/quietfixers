@@ -1,4 +1,4 @@
-from functools import cache
+from functools import cache, cached_property
 
 from termgame.bitmap import Bitmap
 
@@ -116,18 +116,33 @@ class SquareTransitionTable:
     def __init__(self, w: int):
         if w % 2 != 0:
             raise ValueError(f"uneven width: {w}")
-        half_w = w // 2
-
         self.w = w
         self.size = w * w
-        self.n_rings = half_w
+        self.n_rings = w // 2
         self.ring_lens = [8 * ring_i + 4
             for ring_i in range(self.n_rings)]
 
-        self.hard_rotated_indexes = [
-            self.get_hard_rotated_indexes(rot)
-            for rot in range(4)]
+    @cached_property
+    def hard_rotated_indexes(self) -> list[list[int]]:
+        # Hard rotation: by 90 degrees at a time (clockwise)
+        w = self.w
+        hard_rotated_indexes = []
+        for rot in range(4):
+            indexes = []
+            for y in range(w):
+                for x in range(w):
+                    x1 = x
+                    y1 = y
+                    for _ in range(rot):
+                        _x1 = x1
+                        x1 = y1
+                        y1 = w - 1 - _x1
+                    indexes.append(y1 * w + x1)
+            hard_rotated_indexes.append(indexes)
+        return hard_rotated_indexes
 
+    @cached_property
+    def indexes_to_ring_coords(self):
         # Maps bitmap pixel indexes to tuples (ring_i, offset, ring_len),
         # where:
         #   * ring_i is the index of a ring
@@ -142,7 +157,9 @@ class SquareTransitionTable:
         #   A  5
         #   9876
         #
-        self.indexes_to_ring_coords = [None] * self.size
+        w = self.w
+        half_w = w // 2
+        indexes_to_ring_coords = [None] * self.size
         for ring_i, ring_len in enumerate(self.ring_lens):
 
             # Here are the points a, b, c, d for ring_i in range(3):
@@ -160,43 +177,29 @@ class SquareTransitionTable:
             # Number of pixels in one of the 4 sides of the ring
             ring_sidelen = ring_i * 2 + 1
             for j in range(ring_sidelen):
-                self.indexes_to_ring_coords[a + j] = \
+                indexes_to_ring_coords[a + j] = \
                     (ring_i, j, ring_len)
-                self.indexes_to_ring_coords[b + j * w] = \
+                indexes_to_ring_coords[b + j * w] = \
                     (ring_i, j + ring_sidelen, ring_len)
-                self.indexes_to_ring_coords[c - j] = \
+                indexes_to_ring_coords[c - j] = \
                     (ring_i, j + ring_sidelen * 2, ring_len)
-                self.indexes_to_ring_coords[d - j * w] = \
+                indexes_to_ring_coords[d - j * w] = \
                     (ring_i, j + ring_sidelen * 3, ring_len)
+        return indexes_to_ring_coords
 
+    @cached_property
+    def ring_coords_to_indexes(self):
         # Maps (ring_i, offset) to bitmap pixel indexes
-        self.ring_coords_to_indexes = {(ring_i, offset): i
+        return {(ring_i, offset): i
             for i, (ring_i, offset, ring_len) in enumerate(
                 self.indexes_to_ring_coords)}
 
-        self.ring_coords_to_indexes_hard_rotated = [
+    @cached_property
+    def ring_coords_to_indexes_hard_rotated(self):
+        return [
             {coords: indexes[index]
                 for coords, index in self.ring_coords_to_indexes.items()}
             for indexes in self.hard_rotated_indexes]
-
-    def get_hard_rotated_indexes(self, rot: int) -> list[int]:
-        # Hard rotation: by 90 degrees at a time (clockwise)
-        rot = rot % 4
-        if not rot:
-            return list(range(self.size))
-
-        w = self.w
-        indexes = []
-        for y in range(w):
-            for x in range(w):
-                x1 = x
-                y1 = y
-                for _ in range(rot):
-                    _x1 = x1
-                    x1 = y1
-                    y1 = w - 1 - _x1
-                indexes.append(y1 * w + x1)
-        return indexes
 
     def get_slow_rotated_indexes(self, r: int) -> list[int]:
         # Slow rotation: by 1 pixel at a time (clockwise)
@@ -218,18 +221,13 @@ class SquareTransitionTable:
                 ] for (ring_i, offset, ring_len) in self.indexes_to_ring_coords]
 
 
-@cache
-def get_square_transition_table(w: int) -> SquareTransitionTable:
-    return SquareTransitionTable(w)
-
-
 def hard_rotate(bitmap: Bitmap, rot: int):
     if bitmap.w != bitmap.h:
         raise Exception(f"Can't rotate bitmap unless w == h. Have: {(bitmap.w, bitmap.h)}")
     if not rot:
         return
     table = SquareTransitionTable(bitmap.w)
-    bitmap.apply_index_mapping(table.get_hard_rotated_indexes(rot))
+    bitmap.apply_index_mapping(table.hard_rotated_indexes[rot % 4])
 
 
 def slow_rotate(bitmap: Bitmap, rot: int):

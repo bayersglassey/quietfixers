@@ -220,6 +220,9 @@ class SquareTransitionTable:
                     (ring_i, (offset - min(r, ring_len // 4)) % ring_len)
                 ] for (ring_i, offset, ring_len) in self.indexes_to_ring_coords]
 
+    def get_slow_wipe_indexes(self, wipe: int) -> list[int]:
+        return [ ... ]
+
 
 def hard_rotate(bitmap: Bitmap, rot: int):
     if bitmap.w != bitmap.h:
@@ -237,3 +240,12 @@ def slow_rotate(bitmap: Bitmap, rot: int):
         return
     table = SquareTransitionTable(bitmap.w)
     bitmap.apply_index_mapping(table.get_slow_rotated_indexes(rot))
+
+
+def slow_wipe(bitmap: Bitmap, wipe: int):
+    if bitmap.w != bitmap.h:
+        raise Exception(f"Can't wipe bitmap unless w == h. Have: {(bitmap.w, bitmap.h)}")
+    if not wipe:
+        return
+    table = SquareTransitionTable(bitmap.w)
+    bitmap.apply_index_mapping(table.get_slow_wipe_indexes(wipe))

@@ -7,7 +7,7 @@ from termgame.screen import Screen
 from termgame.keyboard import Keyboard, Key, KeyMod, parse_key
 from termgame.game import Game
 
-from .transitions import slow_rotate
+from .transitions import slow_rotate, slow_wipe
 
 
 KEYS_TO_COLOURS = {
@@ -36,6 +36,8 @@ def main(args):
     y = 0
     rot = 0
     target_rot = 0
+    wipe = 0
+    target_wipe = 0
     colour = 7
     autodraw = False
 
@@ -106,6 +108,10 @@ def main(args):
                 target_rot += 5
             elif key == '}':
                 target_rot += w - 1 # 90 degrees
+            elif key == '+':
+                target_wipe += w
+            elif key == '-':
+                target_wipe -= w
             elif key == '`':
                 # Reset all transformations
                 rot = target_rot = 0
@@ -115,8 +121,14 @@ def main(args):
         elif rot > target_rot:
             rot -= 1
 
+        if wipe < target_wipe:
+            wipe += 1
+        elif wipe > target_wipe:
+            wipe -= 1
+
         bitmap_copy = bitmap.copy()
         slow_rotate(bitmap_copy, rot)
+        slow_wipe(bitmap_copy, wipe)
         bitmap_copy.blit(screen)
 
         screen.set_highlight((x, y))
